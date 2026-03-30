@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="العب الآن لعبة كسالة الحمام، أول لعبة رعب مغربية 3D من تطوير أمجد الحفصي. مغامرة في قلب الحمام الشعبي!">
+    <meta name="keywords" content="كسالة الحمام, لعبة رعب مغربية, لعبة رعب 3D, أمجد الحفصي, العاب رعب, العاب مجانية">
+    <meta name="author" content="أمجد الحفصي">
+    <title>كسالة الحمام - أول لعبة رعب مغربية 3D</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: white; }
+        
+        #splash-screen {
+            position: fixed; width: 100%; height: 100%; background: #000; z-index: 10000;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            animation: fadeOut 2s ease-in-out 2s forwards;
+        }
+        .splash-logo { color: #ff3300; font-size: 5rem; text-shadow: 0 0 30px #ff3300; animation: pulse 1.5s infinite; }
+        .splash-text { color: white; font-size: 2rem; margin-top: 20px; letter-spacing: 5px; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+
+        #lang-selector { position: absolute; top: 10px; left: 10px; z-index: 3000; display: flex; gap: 5px; }
+        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: white; padding: 5px 10px; cursor: pointer; border-radius: 5px; font-size: 0.8rem; transition: 0.3s; }
+        .lang-btn:hover, .lang-btn.active { background: #ff3300; border-color: #ff3300; }
+
+        #main-menu {
+            position: fixed; width: 100%; height: 100%; z-index: 2000;
+            background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1000&q=80');
+            background-size: cover; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; text-align: center;
+        }
+
+        .container { 
+            background: rgba(15,15,15,0.98); padding: 30px; border-radius: 25px; 
+            border: 4px solid #ff3300; width: 95%; max-width: 700px; box-shadow: 0 0 50px rgba(255,51,0,0.4);
+            backdrop-filter: blur(5px);
+        }
+
+        h1 { color: #ff3300; font-size: 2.5rem; margin-bottom: 5px; text-shadow: 3px 3px #000; }
+        .location-tag { background: #ff3300; color: white; padding: 4px 15px; border-radius: 50px; font-size: 0.9rem; margin-bottom: 20px; display: inline-block; }
+        
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .full-width-setting { grid-column: span 2; }
+        label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ddd; text-align: right; }
+        .ltr label { text-align: left; }
+
+        select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; font-size: 0.9rem; outline: none; cursor: pointer; }
+        select:focus { border-color: #ff3300; }
+        
+        .btn-start { background: #ff3300; color: #fff; font-size: 20px; padding: 15px; border-radius: 12px; border: none; width: 100%; cursor: pointer; font-weight: bold; transition: 0.4s; }
+        .btn-start:hover { background: #ff5522; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,51,0,0.4); }
+
+        #hud { position: fixed; top: 20px; left: 20px; z-index: 100; background: rgba(0,0,0,0.85); padding: 15px 20px; border-radius: 12px; display: none; border-left: 5px solid #ff3300; backdrop-filter: blur(4px); pointer-events: none; }
+        #crosshair { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 28px; z-index: 100; display: none; pointer-events: none; text-shadow: 0 0 5px #000; }
+        #interact-msg { position: fixed; bottom: 20%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #00ffff; font-size: 1.8rem; padding: 15px 30px; border-radius: 50px; border: 3px solid #00ffff; display: none; z-index: 101; white-space: nowrap; backdrop-filter: blur(4px); box-shadow: 0 0 20px rgba(0,255,255,0.5); text-shadow: 0 0 10px cyan; font-weight: bold; }
+        #tap-counter { position: fixed; top: 100px; right: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 2px solid #00ffff; color: #00ffff; font-size: 1.2rem; z-index: 100; display: none; backdrop-filter: blur(4px); box-shadow: 0 0 15px rgba(0,255,255,0.3); }
+        #instructions { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px; font-size: 0.9rem; color: #ccc; border: 1px solid #ff3300; z-index: 102; pointer-events: none; backdrop-filter: blur(2px); }
+        
+        #jumpscare, #win-screen { position: fixed; width: 100%; height: 100%; z-index: 3000; background: #000; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
+        .the-end, .game-over-text { font-size: 8rem; font-weight: 900; letter-spacing: 10px; animation: glow 2s infinite alternate; }
+        .the-end { color: #ff3300; text-shadow: 0 0 30px #ff0000; }
+        .game-over-text { color: #880000; text-shadow: 0 0 30px #440000; }
+        .end-message { font-size: 2rem; color: #ffaa00; margin-top: 20px; text-shadow: 0 0 10px #ff6600; }
+        .btn-back-menu { margin-top: 40px; padding: 15px 40px; background: #ff3300; color: white; border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-back-menu:hover { background: #ff5522; transform: scale(1.1); }
+        @keyframes glow { from { text-shadow: 0 0 20px #ff0000, 0 0 30px #ff3300; } to { text-shadow: 0 0 40px #ff0000, 0 0 60px #ff6600; transform: scale(1.05); } }
+
+        #touch-controls { position: fixed; bottom: 20px; left: 0; right: 0; z-index: 1000; display: none; justify-content: space-between; padding: 0 15px; pointer-events: none; }
+        #left-joystick { width: 120px; height: 120px; background: rgba(30,30,30,0.85); border: 3px solid #ff3300; border-radius: 60px; position: relative; pointer-events: auto; backdrop-filter: blur(4px); box-shadow: 0 0 20px rgba(255,51,0,0.5); }
+        #joystick-handle { width: 50px; height: 50px; background: #ff3300; border-radius: 25px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #ff3300; transition: transform 0.05s; pointer-events: none; }
+        #right-buttons { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .action-btn { width: 70px; height: 70px; border-radius: 35px; background: rgba(30,30,30,0.85); border: 3px solid #ff3300; color: #ff3300; font-size: 1.4rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); box-shadow: 0 0 15px rgba(255,51,0,0.5); transition: all 0.1s; }
+        .action-btn:active { background: #ff3300; color: white; transform: scale(0.95); }
+        #sprint-btn { border-color: #00ff00; color: #00ff00; }
+        #crouch-btn { border-color: #ffff00; color: #ffff00; }
+        #jump-btn { border-color: #00ffff; color: #00ffff; }
+        #interact-btn { border-color: #ff00ff; color: #ff00ff; }
+        #flashlight-btn { border-color: #ffaa00; color: #ffaa00; }
+        #look-area { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; display: none; pointer-events: auto !important; background: transparent; }
+        .look-area-active { background: rgba(255,51,0,0.05) !important; }
+
+        #earnings-stats { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #00ff00; padding: 10px 20px; border-radius: 10px; border: 2px solid #00ff00; z-index: 2000; font-size: 1.2rem; display: none; backdrop-filter: blur(4px); }
+        #earnings-history { position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: #00ff00; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem; z-index: 2000; border: 1px solid #00ff00; }
+
+        #ad-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 20px; }
+        #search-progress { width: 0%; height: 100%; background: #ff3300; transition: width 5s linear; }
+        @keyframes adPulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+
+        @media (max-width: 600px) {
+            .the-end, .game-over-text { font-size: 3.5rem; }
+            h1 { font-size: 1.8rem; }
+            .end-message { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body class="rtl">
+
+    <div id="splash-screen"><div><div class="splash-logo">👻</div><div class="splash-text">كسالة الحمام</div></div></div>
+
+    <div id="lang-selector">
+        <button class="lang-btn active" onclick="setLanguage('ar')">العربية</button>
+        <button class="lang-btn" onclick="setLanguage('en')">English</button>
+        <button class="lang-btn" onclick="setLanguage('fr')">Français</button>
+    </div>
+
+    <div id="main-menu">
+        <div class="container">
+            <h1 id="ui-title">👻 كسالة الحمام 🐰</h1>
+            <div class="location-tag" id="ui-location">📍 ساحة مدرسة مولاي تهامي</div>
+            <div class="settings-grid">
+                <div class="full-width-setting">
+                    <label id="ui-label-diff">مستوى الصعوبة:</label>
+                    <select id="diff-select"></select>
+                </div>
+                <div>
+                    <label id="ui-label-graphics">جودة الرسومات:</label>
+                    <select id="graphics-quality"></select>
+                </div>
+                <div>
+                    <label id="ui-label-brightness">مستوى السطوع:</label>
+                    <select id="brightness-level"></select>
+                </div>
+                <div class="full-width-setting">
+                    <label id="ui-label-mode">الوضع المحيط:</label>
+                    <select id="game-mode"></select>
+                </div>
+            </div>
+            <button id="start-btn" class="btn-start" onclick="startGame()">دخول ساحة المدرسة 🏫</button>
+        </div>
+    </div>
+
+    <audio id="bg-music" loop preload="auto"></audio>
+    <audio id="sfx-step" loop preload="auto" src="https://www.soundjay.com/misc/sounds/footstep-on-gravel-1.mp3"></audio>
+    <audio id="sfx-step-fast" loop preload="auto" src="https://www.soundjay.com/misc/sounds/footstep-on-gravel-2.mp3"></audio>
+    <audio id="sfx-tap" preload="auto" src="https://www.soundjay.com/misc/sounds/water-tap-1.mp3"></audio>
+    <audio id="sfx-tap-close" preload="auto" src="https://www.soundjay.com/misc/sounds/valve-close-1.mp3"></audio>
+    <audio id="sfx-ghost" preload="auto" src="https://www.soundjay.com/horror/sounds/ghost-1.mp3"></audio>
+    <audio id="sfx-scream" preload="auto" src="https://www.soundjay.com/horror/sounds/scream-1.mp3"></audio>
+    <audio id="sfx-heartbeat" loop preload="auto" src="https://www.soundjay.com/human/sounds/heartbeat-1.mp3"></audio>
+    <audio id="sfx-success" preload="auto" src="https://www.soundjay.com/misc/sounds/bell-ringing-1.mp3"></audio>
+
+    <div id="jumpscare">
+        <div class="game-over-text">GAME OVER</div>
+        <div class="end-message" id="death-msg">أمسكت بك "كسالة الحمام" أو "الكاركري"!</div>
+        <button class="btn-back-menu ui-back-btn" onclick="returnToMenu()">العودة للقائمة الرئيسية</button>
+    </div>
+
+    <div id="win-screen">
+        <div class="the-end">THE END</div>
+        <div class="end-message" id="win-msg">لقد هزمت الرعب في ساحة مدرسة مولاي تهامي</div>
+        <button class="btn-back-menu ui-back-btn" onclick="returnToMenu()">العودة للقائمة الرئيسية</button>
+    </div>
+
+    <div id="hud">
+        <div id="ui-hud-loc" style="color:#ff3300; font-weight:bold; font-size:1.1rem;">ساحة مدرسة مولاي تهامي</div>
+        <div><span id="ui-hud-taps">الصنابير المغلقة:</span> <span id="count">0</span> / 3</div>
+        <div>⏱️ <span id="time">00:00</span></div>
+        <div>🔦 <span id="battery">100</span>%</div>
+        <div>👻 المسافة: <span id="distance">?</span>م</div>
+        <div>🐰 مسافة الأرنب: <span id="rabbit-distance">?</span>م</div>
+    </div>
+
+    <div id="tap-counter"><div>🔵 <span id="remaining-taps">3</span></div></div>
+    <div id="crosshair">+</div>
+    <div id="interact-msg"></div>
+    <div id="instructions"></div>
+
+    <div id="touch-controls">
+        <div id="left-joystick" ontouchstart="handleJoystickStart(event)" ontouchmove="handleJoystickMove(event)" ontouchend="handleJoystickEnd(event)">
+            <div id="joystick-handle"></div>
+        </div>
+        <div id="right-buttons">
+            <div id="jump-btn" class="action-btn" ontouchstart="setAction('jump', true)" ontouchend="setAction('jump', false)">🏃</div>
+            <div id="sprint-btn" class="action-btn" ontouchstart="setAction('sprint', true)" ontouchend="setAction('sprint', false)">⚡</div>
+            <div id="crouch-btn" class="action-btn" ontouchstart="setAction('crouch', true)" ontouchend="setAction('crouch', false)">⬇️</div>
+            <div id="interact-btn" class="action-btn" ontouchstart="setAction('interact', true)" ontouchend="setAction('interact', false)">🔵</div>
+            <div id="flashlight-btn" class="action-btn" ontouchstart="toggleFlashlight()">🔦</div>
+        </div>
+    </div>
+
+    <div id="look-area" ontouchstart="handleLookStart(event)" ontouchmove="handleLookMove(event)" ontouchend="handleLookEnd(event)"></div>
+
+    <div id="earnings-stats">💰 <span id="total-earnings">0</span> سنتيم</div>
+    <div id="earnings-history">💰 <span id="total-earnings-display">0</span> سنتيم</div>
+
+    <script>
+        // ==================== المتغيرات الأساسية ====================
+        let scene, camera, renderer, monster, rabbit, flashlight, ambientLight;
+        let isGameOver = false, gameRunning = false, gameWin = false;
+        let tapsRepaired = 0, monsterSpeed = 0.04, rabbitSpeed = 0.05;
+        let yaw = 0, pitch = 0, keys = {}, interactables = [];
+        let velocity = 0, isGrounded = true;
+        const gravity = -0.03;
+        const jumpPower = 0.4;
+        const playerHeight = 1.7;
+        const crouchHeight = 1.0;
+        let currentPlayerHeight = playerHeight;
+        let isCrouching = false;
+        
+        const HUMAN_WALK_SPEED = 0.14;
+        const HUMAN_JOG_SPEED = 0.24;
+        const CROUCH_SPEED = 0.08;
+        
+        let currentSpeed = HUMAN_WALK_SPEED;
+        
+        let flashlightOn = true;
+        let battery = 100;
+        const batteryDrainRate = 0.025;
+        
+        let bloodParticles = null, snowParticles = null, easterEggs = [];
+        let startTime = 0;
+        let timerInterval = null;
+        let monsterDistance = 0, rabbitDistance = 0;
+        let tapGlows = [];
+        const INTERACT_DISTANCE = 6;
+
+        let adShowing = false;
+        let totalEarnings = 0;
+
+        let lookActive = false;
+        let lastTouchX = 0, lastTouchY = 0;
+        const LOOK_SENSITIVITY = 0.006;
+
+        let joystickActive = false;
+        let joystickVector = { x: 0, y: 0 };
+        let joystickStartX = 0, joystickStartY = 0;
+
+        let brightness = 'normal';
+        let quality = 'high';
+        
+        let musicStarted = false;
+        let currentMusicSrc = "";
+
+        const bgMusic = document.getElementById('bg-music');
+        const sfxStep = document.getElementById('sfx-step');
+        const sfxStepFast = document.getElementById('sfx-step-fast');
+        const sfxTap = document.getElementById('sfx-tap');
+        const sfxTapClose = document.getElementById('sfx-tap-close');
+        const sfxGhost = document.getElementById('sfx-ghost');
+        const sfxScream = document.getElementById('sfx-scream');
+        const sfxHeartbeat = document.getElementById('sfx-heartbeat');
+        const sfxSuccess = document.getElementById('sfx-success');
+
+        const themeData = {
+            normal: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            nightmare: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            halloween: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            christmas: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+            ramadan: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+            "eid-fitr": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+            "eid-adha": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
+            "easter": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+        };
+
+        const translations = {
+            ar: {
+                dir: 'rtl', title: '👻 كسالة الحمام 🐰', location: '📍 ساحة مدرسة مولاي تهامي',
+                labelDiff: 'مستوى الصعوبة:', labelGraphics: 'جودة الرسومات:', labelBrightness: 'مستوى السطوع:', labelMode: 'الوضع المحيط:',
+                startBtn: 'دخول ساحة المدرسة 🏫', backBtn: 'العودة للقائمة الرئيسية',
+                deathMsg: 'أمسكت بك "كسالة الحمام" أو "الكاركري"!', winMsg: 'لقد هزمت الرعب في ساحة مدرسة مولاي تهامي',
+                hudTaps: 'الصنابير المغلقة:', interactMsg: '🔵 اضغط E لإغلاق الصنبور', remainingTaps: 'الصنابير المتبقية:',
+                instructions: ['WASD : التحرك (سرعة إنسان عادي - 5 كم/ساعة)', 'الماوس : النظر', 'مسافة : القفز', 'Shift : الهرولة الخفيفة', 'Ctrl : الانحناء', '🔵 E : إغلاق الصنبور', 'F : كشاف / إطفاء', 'R : إعادة شحن الكشاف'],
+                diffs: [{v:"0",t:"🛠️ تجريبي"},{v:"0.02",t:"🌱 سهل"},{v:"0.03",t:"🛡️ متوسط"},{v:"0.04",t:"⚠️ صعب"},{v:"0.06",t:"💀 متطرف"},{v:"0.08",t:"🔥 مستحيل"},{v:"0.1",t:"🕳️ Hollow"}],
+                graphics: [{v:"high",t:"🌟 واقعية"},{v:"medium",t:"⚡ متوسطة"},{v:"low",t:"🎨 كرتونية"}],
+                brightness: [{v:"darkest",t:"🌑 داكن"},{v:"normal",t:"💡 عادي"},{v:"bright",t:"☀️ عالي"}],
+                modes: [{v:"normal",t:"🏠 المدرسة"},{v:"nightmare",t:"👹 كابوس"},{v:"halloween",t:"🎃 هالوين"},{v:"christmas",t:"🎄 كريسماس"},{v:"ramadan",t:"🌙 رمضان"},{v:"eid-fitr",t:"🍬 عيد الفطر"},{v:"eid-adha",t:"🐏 عيد الأضحى"},{v:"easter",t:"🐣 عيد الفصح"}]
+            },
+            en: {
+                dir: 'ltr', title: '👻 The Toilet Ghost 🐰', location: '📍 Moulay Thami School Yard',
+                labelDiff: 'Difficulty:', labelGraphics: 'Graphics:', labelBrightness: 'Brightness:', labelMode: 'Ambient Mode:',
+                startBtn: 'Enter School 🏫', backBtn: 'Back to Menu',
+                deathMsg: 'The Toilet Ghost caught you!', winMsg: 'You defeated the horror!',
+                hudTaps: 'Closed Taps:', interactMsg: '🔵 Press E to Close', remainingTaps: 'Remaining Taps:',
+                instructions: ['WASD: Move (normal human speed - 3 mph)', 'Mouse: Look', 'Space: Jump', 'Shift: Jog', 'Ctrl: Crouch', '🔵 E: Close Tap', 'F: Flashlight', 'R: Recharge'],
+                diffs: [{v:"0",t:"🛠️ Sandbox"},{v:"0.02",t:"🌱 Easy"},{v:"0.03",t:"🛡️ Medium"},{v:"0.04",t:"⚠️ Hard"},{v:"0.06",t:"💀 Extreme"},{v:"0.08",t:"🔥 Impossible"},{v:"0.1",t:"🕳️ Hollow"}],
+                graphics: [{v:"high",t:"🌟 Realistic"},{v:"medium",t:"⚡ Medium"},{v:"low",t:"🎨 Cartoon"}],
+                brightness: [{v:"darkest",t:"🌑 Darkest"},{v:"normal",t:"💡 Normal"},{v:"bright",t:"☀️ Bright"}],
+                modes: [{v:"normal",t:"🏠 School"},{v:"nightmare",t:"👹 Nightmare"},{v:"halloween",t:"🎃 Halloween"},{v:"christmas",t:"🎄 Christmas"},{v:"ramadan",t:"🌙 Ramadan"},{v:"eid-fitr",t:"🍬 Eid Fitr"},{v:"eid-adha",t:"🐏 Eid Adha"},{v:"easter",t:"🐣 Easter"}]
+            },
+            fr: {
+                dir: 'ltr', title: '👻 Le Fantôme 🐰', location: '📍 École Moulay Thami',
+                labelDiff: 'Difficulté:', labelGraphics: 'Graphismes:', labelBrightness: 'Luminosité:', labelMode: 'Mode:',
+                startBtn: 'Entrer 🏫', backBtn: 'Retour',
+                deathMsg: 'Le Fantôme vous a attrapé!', winMsg: 'Vous avez vaincu!',
+                hudTaps: 'Robinets fermés:', interactMsg: '🔵 Appuyez E', remainingTaps: 'Restants:',
+                instructions: ['WASD: Déplacer (vitesse humaine normale - 5 km/h)', 'Souris: Regarder', 'Espace: Sauter', 'Shift: Trotter', 'Ctrl: Accroupir', '🔵 E: Fermer', 'F: Lampe', 'R: Recharger'],
+                diffs: [{v:"0",t:"🛠️ Bac à sable"},{v:"0.02",t:"🌱 Facile"},{v:"0.03",t:"🛡️ Moyen"},{v:"0.04",t:"⚠️ Difficile"},{v:"0.06",t:"💀 Extrême"},{v:"0.08",t:"🔥 Impossible"},{v:"0.1",t:"🕳️ Hollow"}],
+                graphics: [{v:"high",t:"🌟 Réaliste"},{v:"medium",t:"⚡ Moyen"},{v:"low",t:"🎨 Dessin animé"}],
+                brightness: [{v:"darkest",t:"🌑 Sombre"},{v:"normal",t:"💡 Normal"},{v:"bright",t:"☀️ Lumineux"}],
+                modes: [{v:"normal",t:"🏠 École"},{v:"nightmare",t:"👹 Cauchemar"},{v:"halloween",t:"🎃 Halloween"},{v:"christmas",t:"🎄 Noël"},{v:"ramadan",t:"🌙 Ramadan"},{v:"eid-fitr",t:"🍬 Aïd Fitr"},{v:"eid-adha",t:"🐏 Aïd Adha"},{v:"easter",t:"🐣 Pâques"}]
+            }
+        };
+
+        let currentLang = 'ar';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = translations[lang];
+            document.body.dir = t.dir;
+            document.body.className = t.dir;
+            document.getElementById('ui-title').innerText = t.title;
+            document.getElementById('ui-location').innerText = t.location;
+            document.getElementById('ui-label-diff').innerText = t.labelDiff;
+            document.getElementById('ui-label-graphics').innerText = t.labelGraphics;
+            document.getElementById('ui-label-brightness').innerText = t.labelBrightness;
+            document.getElementById('ui-label-mode').innerText = t.labelMode;
+            document.getElementById('start-btn').innerText = t.startBtn;
+            document.getElementById('death-msg').innerText = t.deathMsg;
+            document.getElementById('win-msg').innerText = t.winMsg;
+            document.getElementById('ui-hud-loc').innerText = t.location.replace('📍 ', '');
+            document.getElementById('ui-hud-taps').innerText = t.hudTaps;
+            document.querySelectorAll('.ui-back-btn').forEach(b => b.innerText = t.backBtn);
+            document.getElementById('instructions').innerHTML = t.instructions.map(txt => `<div>${txt}</div>`).join('');
+            populateSelect('diff-select', t.diffs);
+            populateSelect('graphics-quality', t.graphics);
+            populateSelect('brightness-level', t.brightness);
+            populateSelect('game-mode', t.modes);
+        }
+
+        function populateSelect(id, list) {
+            const select = document.getElementById(id);
+            const currentVal = select.value;
+            select.innerHTML = '';
+            list.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.v;
+                opt.innerText = item.t;
+                if (item.v === currentVal || (currentVal === "" && (item.v === "normal" || item.v === "0.03"))) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        setLanguage('ar');
+
+        // ==================== دوال التحكم باللمس ====================
+        function handleLookStart(e) { e.preventDefault(); lookActive = true; const touch = e.touches[0]; lastTouchX = touch.clientX; lastTouchY = touch.clientY; document.getElementById('look-area').classList.add('look-area-active'); }
+        function handleLookMove(e) { e.preventDefault(); if (!lookActive || !gameRunning || isGameOver || adShowing) return; const touch = e.touches[0]; const deltaX = touch.clientX - lastTouchX; const deltaY = touch.clientY - lastTouchY; yaw -= deltaX * LOOK_SENSITIVITY; pitch -= deltaY * LOOK_SENSITIVITY; pitch = Math.max(-1.4, Math.min(1.4, pitch)); lastTouchX = touch.clientX; lastTouchY = touch.clientY; if (camera) camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
+        function handleLookEnd(e) { e.preventDefault(); lookActive = false; document.getElementById('look-area').classList.remove('look-area-active'); }
+        function handleJoystickStart(e) { e.preventDefault(); if (adShowing || isGameOver || gameWin) return; joystickActive = true; const touch = e.touches[0]; const rect = document.getElementById('left-joystick').getBoundingClientRect(); joystickStartX = rect.left + rect.width / 2; joystickStartY = rect.top + rect.height / 2; updateJoystick(touch.clientX, touch.clientY); }
+        function handleJoystickMove(e) { e.preventDefault(); if (!joystickActive || adShowing || isGameOver || gameWin) return; const touch = e.touches[0]; updateJoystick(touch.clientX, touch.clientY); }
+        function handleJoystickEnd(e) { e.preventDefault(); joystickActive = false; joystickVector.x = 0; joystickVector.y = 0; document.getElementById('joystick-handle').style.transform = 'translate(-50%, -50%)'; }
+        function updateJoystick(touchX, touchY) { const dx = touchX - joystickStartX; const dy = touchY - joystickStartY; const distance = Math.sqrt(dx*dx + dy*dy); const maxDistance = 40; if (distance > maxDistance) { const angle = Math.atan2(dy, dx); joystickVector.x = Math.cos(angle); joystickVector.y = Math.sin(angle); } else { joystickVector.x = dx / maxDistance; joystickVector.y = dy / maxDistance; } const handle = document.getElementById('joystick-handle'); handle.style.transform = `translate(calc(-50% + ${joystickVector.x * maxDistance}px), calc(-50% + ${joystickVector.y * maxDistance}px))`; }
+        function setAction(action, state) { if (adShowing) return; if (action === 'jump' && state && isGrounded && gameRunning && !isGameOver) { velocity = jumpPower; isGrounded = false; } if (action === 'sprint') keys['shift'] = state; if (action === 'crouch') isCrouching = state; if (action === 'interact' && state) { keys['e'] = true; setTimeout(() => { keys['e'] = false; }, 200); } }
+        function toggleFlashlight() { if (gameRunning && !isGameOver && !adShowing) { flashlightOn = !flashlightOn; if (flashlight) flashlight.intensity = flashlightOn ? 3.0 : 0; document.getElementById('flashlight-btn').classList.toggle('active'); } }
+
+        // ==================== دوال الموسيقى المستمرة ====================
+        function playModeMusic(mode) {
+            const music = document.getElementById('bg-music');
+            let musicSrc = themeData.normal;
+            switch(mode) {
+                case 'normal': musicSrc = themeData.normal; break;
+                case 'nightmare': musicSrc = themeData.nightmare; break;
+                case 'halloween': musicSrc = themeData.halloween; break;
+                case 'christmas': musicSrc = themeData.christmas; break;
+                case 'ramadan': musicSrc = themeData.ramadan; break;
+                case 'eid-fitr': musicSrc = themeData["eid-fitr"]; break;
+                case 'eid-adha': musicSrc = themeData["eid-adha"]; break;
+                case 'easter': musicSrc = themeData["easter"]; break;
+            }
+            if (currentMusicSrc !== musicSrc) {
+                currentMusicSrc = musicSrc;
+                music.src = currentMusicSrc;
+                music.volume = 0.35;
+                music.loop = true;
+                music.play().catch(() => {});
+                musicStarted = true;
+            } else if (music.paused && !isGameOver && !gameWin) {
+                music.play().catch(() => {});
+            }
+        }
+        
+        function stopMusic() {
+            const music = document.getElementById('bg-music');
+            music.pause();
+            music.currentTime = 0;
+            musicStarted = false;
+        }
+
+        // ==================== فانوس رمضان ====================
+        let ramadanStarData = null;
+        
+        function addRamadanSkyDecorations() {
+            if (window.ramadanStarData && window.ramadanStarData.group) scene.remove(window.ramadanStarData.group);
+            if (window.ramadanStarData && window.ramadanStarData.light) scene.remove(window.ramadanStarData.light);
+            
+            const moonGroup = new THREE.Group();
+            const moonMain = new THREE.Mesh(new THREE.SphereGeometry(1.2, 64, 64), new THREE.MeshStandardMaterial({ color: 0xffdd99, emissive: 0x442200, emissiveIntensity: 0.8 }));
+            moonGroup.add(moonMain);
+            const moonShadow = new THREE.Mesh(new THREE.SphereGeometry(1.2, 64, 64), new THREE.MeshStandardMaterial({ color: 0x0a0a2a, emissive: 0x000000 }));
+            moonShadow.position.set(0.45, 0.25, 0.2);
+            moonShadow.scale.set(0.9, 0.9, 0.9);
+            moonGroup.add(moonShadow);
+            const moonGlow = new THREE.Mesh(new THREE.SphereGeometry(1.45, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa66, transparent: true, opacity: 0.2 }));
+            moonGroup.add(moonGlow);
+            moonGroup.position.set(40, 18, -35);
+            scene.add(moonGroup);
+            
+            const starGroup = new THREE.Group();
+            const starCore = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffcc88, emissive: 0xffaa44, emissiveIntensity: 1.2 }));
+            starGroup.add(starCore);
+            const rayMat = new THREE.MeshStandardMaterial({ color: 0xffcc88, emissive: 0xffaa44 });
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const ray = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.8, 8), rayMat);
+                ray.position.set(Math.cos(angle) * 0.7, Math.sin(angle) * 0.7, 0);
+                ray.rotation.z = angle;
+                starGroup.add(ray);
+            }
+            const starGlow = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffaa66, transparent: true, opacity: 0.3 }));
+            starGroup.add(starGlow);
+            starGroup.position.set(-30, 22, 40);
+            scene.add(starGroup);
+            const starLight = new THREE.PointLight(0xffaa66, 0.8, 40);
+            starLight.position.copy(starGroup.position);
+            scene.add(starLight);
+            window.ramadanStarData = { group: starGroup, light: starLight, time: 0 };
+        }
+
+        // ==================== زخارف كريسماس ====================
+        let christmasGifts = [];
+        let snowmen = [];
+        let santas = [];
+        
+        function createChristmasGift(x, z) {
+            const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffd700, 0xff69b4, 0x00ffff];
+            const gift = new THREE.Group();
+            const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.3 }));
+            gift.add(box);
+            const ribbon1 = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.06, 0.1), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            gift.add(ribbon1);
+            const ribbon2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.52), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            gift.add(ribbon2);
+            const bow = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshStandardMaterial({ color: 0xffaa66 }));
+            bow.position.set(0, 0.3, 0);
+            gift.add(bow);
+            gift.position.set(x, 0.25, z);
+            scene.add(gift);
+            christmasGifts.push(gift);
+            return gift;
+        }
+        
+        function createSnowman(x, z) {
+            const snowmanGroup = new THREE.Group();
+            const bodyBottom = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+            bodyBottom.position.y = 0.55;
+            snowmanGroup.add(bodyBottom);
+            const bodyMiddle = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 24), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+            bodyMiddle.position.y = 1.1;
+            snowmanGroup.add(bodyMiddle);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 24, 24), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+            head.position.y = 1.6;
+            snowmanGroup.add(head);
+            const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            eyeL.position.set(-0.12, 1.68, 0.32);
+            snowmanGroup.add(eyeL);
+            const eyeR = eyeL.clone();
+            eyeR.position.set(0.12, 1.68, 0.32);
+            snowmanGroup.add(eyeR);
+            const nose = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.15, 8), new THREE.MeshStandardMaterial({ color: 0xff6600 }));
+            nose.position.set(0, 1.65, 0.35);
+            nose.rotation.x = 0.3;
+            snowmanGroup.add(nose);
+            const hatBase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.1, 8), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+            hatBase.position.y = 1.85;
+            snowmanGroup.add(hatBase);
+            const hatTop = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.4, 8), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+            hatTop.position.y = 2.05;
+            snowmanGroup.add(hatTop);
+            snowmanGroup.position.set(x, 0, z);
+            scene.add(snowmanGroup);
+            snowmen.push(snowmanGroup);
+            return snowmanGroup;
+        }
+        
+        function createSanta(x, z) {
+            const santaGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 1, 12), new THREE.MeshStandardMaterial({ color: 0xff3333, roughness: 0.3 }));
+            body.position.y = 0.5;
+            santaGroup.add(body);
+            const belt = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.05, 8, 24), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            belt.position.y = 0.7;
+            belt.rotation.x = Math.PI / 2;
+            santaGroup.add(belt);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 24, 24), new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.2 }));
+            head.position.y = 1.05;
+            santaGroup.add(head);
+            const beard = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }));
+            beard.scale.set(1.2, 0.8, 0.6);
+            beard.position.set(0, 0.95, 0.25);
+            santaGroup.add(beard);
+            const hatBase = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 0.15, 8), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
+            hatBase.position.y = 1.28;
+            santaGroup.add(hatBase);
+            const hatTop = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.65, 8), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
+            hatTop.position.y = 1.55;
+            santaGroup.add(hatTop);
+            const hatBall = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            hatBall.position.y = 1.85;
+            santaGroup.add(hatBall);
+            const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            eyeL.position.set(-0.12, 1.12, 0.38);
+            santaGroup.add(eyeL);
+            const eyeR = eyeL.clone();
+            eyeR.position.set(0.12, 1.12, 0.38);
+            santaGroup.add(eyeR);
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff6666 }));
+            nose.position.set(0, 1.08, 0.45);
+            santaGroup.add(nose);
+            santaGroup.position.set(x, 0, z);
+            scene.add(santaGroup);
+            santas.push(santaGroup);
+            return santaGroup;
+        }
+
+        // ==================== كسالة الحمام بلباس خاص بكل وضع ====================
+        function spawnMonsterWithOutfit(mode) {
+            monster = new THREE.Group();
+            
+            let bodyColor = 0x000000;
+            let emissiveColor = 0x111111;
+            let outfitDetails = null;
+            
+            switch(mode) {
+                case 'normal': bodyColor = 0x111111; emissiveColor = 0x220000; break;
+                case 'nightmare': bodyColor = 0x330000; emissiveColor = 0x550000; break;
+                case 'halloween': bodyColor = 0x442200; emissiveColor = 0x331100; outfitDetails = { type: 'pumpkin', color: 0xff6600 }; break;
+                case 'christmas': bodyColor = 0x882222; emissiveColor = 0x441111; outfitDetails = { type: 'santa', color: 0xff3333 }; break;
+                case 'ramadan': bodyColor = 0x224422; emissiveColor = 0x113311; outfitDetails = { type: 'lantern', color: 0xffaa33 }; break;
+                case 'eid-fitr': bodyColor = 0x442244; emissiveColor = 0x331133; outfitDetails = { type: 'candy', color: 0xff69b4 }; break;
+                case 'eid-adha': bodyColor = 0x442222; emissiveColor = 0x331111; outfitDetails = { type: 'sheep', color: 0xdddddd }; break;
+                case 'easter': bodyColor = 0x442244; emissiveColor = 0x331133; outfitDetails = { type: 'egg', color: 0xffaa88 }; break;
+                default: bodyColor = 0x000000;
+            }
+            
+            const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, emissive: emissiveColor, roughness: 0.3 });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.2, 4.5, 16), bodyMat);
+            body.position.y = 2.2;
+            monster.add(body);
+            
+            const headMat = new THREE.MeshStandardMaterial({ color: bodyColor, emissive: emissiveColor, roughness: 0.2 });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 32), headMat);
+            head.position.y = 4.5;
+            monster.add(head);
+            
+            if (outfitDetails) {
+                switch(outfitDetails.type) {
+                    case 'pumpkin':
+                        const pumpkinHat = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0x331100 }));
+                        pumpkinHat.position.y = 5.2;
+                        monster.add(pumpkinHat);
+                        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0x228b22 }));
+                        stem.position.y = 5.7;
+                        monster.add(stem);
+                        break;
+                    case 'santa':
+                        const santaHat = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.3, 8), new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x331100 }));
+                        santaHat.position.y = 5.3;
+                        monster.add(santaHat);
+                        const hatBall = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                        hatBall.position.y = 5.9;
+                        monster.add(hatBall);
+                        const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.12, 8, 32), new THREE.MeshStandardMaterial({ color: 0xff3333 }));
+                        scarf.position.y = 3.5;
+                        scarf.rotation.x = Math.PI / 2;
+                        monster.add(scarf);
+                        break;
+                    case 'lantern':
+                        const lanternBody = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0x442200, metalness: 0.6 }));
+                        lanternBody.position.y = 2.8;
+                        monster.add(lanternBody);
+                        const lanternTop = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0x442200 }));
+                        lanternTop.position.y = 3.4;
+                        monster.add(lanternTop);
+                        const crescent = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.08, 8, 20, Math.PI), new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0x664400 }));
+                        crescent.rotation.x = Math.PI / 2;
+                        crescent.rotation.z = 0.3;
+                        crescent.position.set(0.5, 3.6, 0.5);
+                        monster.add(crescent);
+                        break;
+                    case 'candy':
+                        for(let i = 0; i < 5; i++) {
+                            const stripe = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.08, 8, 32), new THREE.MeshStandardMaterial({ color: 0xff69b4 }));
+                            stripe.position.y = 2 + i * 0.5;
+                            stripe.rotation.x = Math.PI / 2;
+                            monster.add(stripe);
+                        }
+                        break;
+                    case 'sheep':
+                        const woolMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.7 });
+                        for(let i = 0; i < 12; i++) {
+                            const woolBall = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), woolMat);
+                            const angle = (i / 12) * Math.PI * 2;
+                            woolBall.position.set(Math.cos(angle) * 1.1, 2.5 + Math.sin(angle * 2) * 0.5, Math.sin(angle) * 1.1);
+                            monster.add(woolBall);
+                        }
+                        break;
+                    case 'egg':
+                        const eggBody = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffaa88, emissive: 0x442200 }));
+                        eggBody.scale.set(0.9, 1.3, 0.9);
+                        eggBody.position.y = 3.2;
+                        monster.add(eggBody);
+                        for(let i = 0; i < 8; i++) {
+                            const spot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), new THREE.MeshStandardMaterial({ color: 0xff69b4 }));
+                            spot.position.set((Math.random() - 0.5) * 1.2, 3 + Math.random() * 1.5, (Math.random() - 0.5) * 1.2);
+                            monster.add(spot);
+                        }
+                        break;
+                }
+            }
+            
+            const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+            eyeL.position.set(0.4, 4.7, 0.8);
+            monster.add(eyeL);
+            const eyeR = eyeL.clone();
+            eyeR.position.x = -0.4;
+            monster.add(eyeR);
+            const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.08, 16, 32, Math.PI), new THREE.MeshStandardMaterial({ color: 0x660000, emissive: 0x330000 }));
+            mouth.rotation.x = Math.PI / 2;
+            mouth.rotation.z = Math.PI;
+            mouth.position.set(0, 4.2, 0.8);
+            monster.add(mouth);
+            
+            const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 2.5, 8), new THREE.MeshStandardMaterial({ color: bodyColor }));
+            armL.position.set(1.2, 3.5, 0);
+            armL.rotation.z = 0.3;
+            armL.rotation.x = 0.2;
+            monster.add(armL);
+            const armR = armL.clone();
+            armR.position.x = -1.2;
+            armR.rotation.z = -0.3;
+            monster.add(armR);
+            
+            monster.position.set(35, 0, 35);
+            scene.add(monster);
+        }
+
+        // ==================== بناء الساحة ====================
+        function createWalls() {
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.6, metalness: 0.1 });
+            const wallHeight = 6;
+            const wallThick = 0.6;
+            const yardSize = 100;
+            
+            const frontWall = new THREE.Mesh(new THREE.BoxGeometry(yardSize, wallHeight, wallThick), wallMaterial);
+            frontWall.position.set(0, wallHeight/2, yardSize/2);
+            frontWall.castShadow = true;
+            scene.add(frontWall);
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(yardSize, wallHeight, wallThick), wallMaterial);
+            backWall.position.set(0, wallHeight/2, -yardSize/2);
+            backWall.castShadow = true;
+            scene.add(backWall);
+            const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallHeight, yardSize), wallMaterial);
+            rightWall.position.set(yardSize/2, wallHeight/2, 0);
+            rightWall.castShadow = true;
+            scene.add(rightWall);
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallHeight, yardSize), wallMaterial);
+            leftWall.position.set(-yardSize/2, wallHeight/2, 0);
+            leftWall.castShadow = true;
+            scene.add(leftWall);
+            
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0xCD7F32, roughness: 0.4 });
+            for (let i = -45; i <= 45; i += 15) {
+                const pillarFront = new THREE.Mesh(new THREE.BoxGeometry(0.8, 7, 0.8), pillarMat);
+                pillarFront.position.set(i, 3.5, yardSize/2 - 0.3);
+                pillarFront.castShadow = true;
+                scene.add(pillarFront);
+                const pillarBack = pillarFront.clone();
+                pillarBack.position.set(i, 3.5, -yardSize/2 + 0.3);
+                scene.add(pillarBack);
+                const pillarRight = new THREE.Mesh(new THREE.BoxGeometry(0.8, 7, 0.8), pillarMat);
+                pillarRight.position.set(yardSize/2 - 0.3, 3.5, i);
+                scene.add(pillarRight);
+                const pillarLeft = pillarRight.clone();
+                pillarLeft.position.set(-yardSize/2 + 0.3, 3.5, i);
+                scene.add(pillarLeft);
+            }
+        }
+
+        // ==================== دوال اللعبة الأساسية ====================
+        function startGame() {
+            monsterSpeed = parseFloat(document.getElementById('diff-select').value);
+            const mode = document.getElementById('game-mode').value;
+            brightness = document.getElementById('brightness-level').value;
+            quality = document.getElementById('graphics-quality').value;
+
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('tap-counter').style.display = 'block';
+            document.getElementById('crosshair').style.display = 'block';
+            document.getElementById('lang-selector').style.display = 'none';
+            document.getElementById('earnings-stats').style.display = 'block';
+            
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) { document.getElementById('touch-controls').style.display = 'flex'; document.getElementById('look-area').style.display = 'block'; }
+
+            tapsRepaired = 0;
+            document.getElementById('count').innerText = "0";
+            document.getElementById('remaining-taps').innerText = "3";
+            isGameOver = false;
+            gameWin = false;
+            startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+            battery = 100;
+            updateBatteryDisplay();
+
+            initThreeJS(mode);
+            playModeMusic(mode);
+        }
+
+        function returnToMenu() {
+            if (renderer) { renderer.domElement.remove(); renderer.dispose(); }
+            gameRunning = false; isGameOver = false;
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('win-screen').style.display = 'none';
+            document.getElementById('jumpscare').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('tap-counter').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'none';
+            document.getElementById('lang-selector').style.display = 'flex';
+            document.getElementById('earnings-stats').style.display = 'none';
+            document.getElementById('touch-controls').style.display = 'none';
+            document.getElementById('look-area').style.display = 'none';
+            adShowing = false;
+            sfxStep.pause(); sfxStepFast.pause(); sfxHeartbeat.pause();
+            if (document.pointerLockElement) document.exitPointerLock();
+        }
+
+        function updateTimer() { if (!gameRunning || isGameOver || gameWin) return; const elapsed = Math.floor((Date.now() - startTime) / 1000); const mins = Math.floor(elapsed / 60).toString().padStart(2, '0'); const secs = (elapsed % 60).toString().padStart(2, '0'); document.getElementById('time').innerText = `${mins}:${secs}`; }
+        function updateBatteryDisplay() { document.getElementById('battery').innerText = Math.max(0, Math.floor(battery)); }
+
+        function initThreeJS(mode) {
+            scene = new THREE.Scene();
+            let bgColor = 0x111122;
+            switch(mode) {
+                case 'normal': bgColor = 0x1a2a3a; break;
+                case 'nightmare': bgColor = 0x0a0000; break;
+                case 'halloween': bgColor = 0x1a0a00; break;
+                case 'christmas': bgColor = 0x0a1030; break;
+                case 'ramadan': bgColor = 0x1a1a2a; break;
+                case 'eid-fitr': bgColor = 0x1a0a1a; break;
+                case 'eid-adha': bgColor = 0x0a0000; break;
+                case 'easter': bgColor = 0x4a2a4a; break;
+            }
+            scene.background = new THREE.Color(bgColor);
+            scene.fog = new THREE.Fog(bgColor, 30, 130);
+
+            camera = new THREE.PerspectiveCamera(85, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, playerHeight, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: quality !== 'low' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = (quality === 'high');
+            document.body.appendChild(renderer.domElement);
+
+            flashlight = new THREE.SpotLight(0xffeedd, 3.0, 45, Math.PI/4, 0.5, 1);
+            flashlight.castShadow = (quality === 'high');
+            camera.add(flashlight);
+            camera.add(flashlight.target);
+            flashlight.target.position.set(0, 0, -1);
+            scene.add(camera);
+
+            const ambientIntensity = brightness === 'bright' ? 0.45 : (brightness === 'darkest' ? 0.1 : 0.25);
+            ambientLight = new THREE.AmbientLight(0xffffff, ambientIntensity);
+            scene.add(ambientLight);
+
+            createYard(mode);
+            createWalls();
+            createBlueTaps();
+            
+            if (monsterSpeed > 0) spawnMonsterWithOutfit(mode);
+            if (mode === 'easter') { spawnRabbit(); setupEasterEffects(); }
+            if (mode === 'normal') createSchoolDesks();
+            if (mode === 'nightmare') setupNightmareEffects();
+            if (mode === 'christmas') { setupChristmasEffects(); createChristmasDecorations(); }
+            if (mode === 'halloween') setupHalloweenEffects();
+            if (mode === 'ramadan') { setupRamadanEffects(); addRamadanSkyDecorations(); }
+            if (mode === 'eid-fitr') setupEidFitrEffects();
+            if (mode === 'eid-adha') setupEidAdhaEffects();
+
+            setupControls();
+            gameRunning = true;
+            animate();
+        }
+
+        function createYard(mode) {
+            let floorColor = 0x333333;
+            switch(mode) {
+                case 'normal': floorColor = 0x4a6b8a; break;
+                case 'nightmare': floorColor = 0x1a0000; break;
+                case 'halloween': floorColor = 0x2a1a0a; break;
+                case 'christmas': floorColor = 0xeeeeee; break;
+                case 'ramadan': floorColor = 0x2a2a1a; break;
+                case 'eid-fitr': floorColor = 0x2a1a2a; break;
+                case 'eid-adha': floorColor = 0x2a0a0a; break;
+                case 'easter': floorColor = 0x3a2a3a; break;
+            }
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(98, 98), new THREE.MeshStandardMaterial({ color: floorColor, roughness: 0.8 }));
+            ground.rotation.x = -Math.PI/2;
+            ground.receiveShadow = true;
+            ground.position.y = 0;
+            scene.add(ground);
+        }
+
+        function createSchoolDesks() {
+            for (let i = 0; i < 30; i++) {
+                const x = (Math.random() - 0.5) * 80;
+                const z = (Math.random() - 0.5) * 80;
+                const deskGroup = new THREE.Group();
+                const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 1), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
+                top.position.y = 0.8;
+                deskGroup.add(top);
+                const legPositions = [[-0.6,0.4,-0.4],[0.6,0.4,-0.4],[-0.6,0.4,0.4],[0.6,0.4,0.4]];
+                legPositions.forEach(pos => {
+                    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), new THREE.MeshStandardMaterial({ color: 0x654321 }));
+                    leg.position.set(pos[0], pos[1], pos[2]);
+                    deskGroup.add(leg);
+                });
+                deskGroup.position.set(x, 0, z);
+                scene.add(deskGroup);
+            }
+        }
+
+        function createBlueTaps() {
+            const tapPositions = [];
+            while (tapPositions.length < 3) {
+                const x = (Math.random() - 0.5) * 90;
+                const z = (Math.random() - 0.5) * 90;
+                if (Math.abs(x) < 45 && Math.abs(z) < 45 && !tapPositions.some(p => Math.hypot(p[0]-x, p[2]-z) < 10)) {
+                    tapPositions.push([x, 0.8, z]);
+                }
+            }
+            tapPositions.forEach((pos, index) => {
+                const tapGroup = new THREE.Group();
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.2), new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x004488 }));
+                base.position.y = 0.1;
+                tapGroup.add(base);
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,1.2), new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x004488 }));
+                body.position.y = 0.7;
+                tapGroup.add(body);
+                const handle = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshStandardMaterial({ color: 0x88ddff, emissive: 0x2266aa }));
+                handle.position.set(0.3, 0.9, 0);
+                tapGroup.add(handle);
+                const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.6), new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x004488 }));
+                spout.rotation.z = Math.PI/2;
+                spout.position.set(0.6, 0.6, 0);
+                tapGroup.add(spout);
+                const glowLight = new THREE.PointLight(0x0088ff, 2.0, 10);
+                glowLight.position.set(0, 0.7, 0);
+                tapGroup.add(glowLight);
+                tapGroup.position.set(pos[0], pos[1], pos[2]);
+                tapGroup.castShadow = true;
+                scene.add(tapGroup);
+                tapGroup.userData = { type: 'TAP', active: true, index: index, position: new THREE.Vector3(pos[0], pos[1], pos[2]) };
+                interactables.push(tapGroup);
+                tapGlows.push({ group: tapGroup, light: glowLight, pulseTime: Math.random() * 10 });
+            });
+        }
+
+        function spawnRabbit() {
+            rabbit = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16), new THREE.MeshStandardMaterial({ color: 0xffaa88, emissive: 0x442200 }));
+            body.scale.set(1.2, 0.9, 0.8);
+            body.position.y = 0.8;
+            rabbit.add(body);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16), new THREE.MeshStandardMaterial({ color: 0xffaa88 }));
+            head.position.set(0, 1.3, 0.5);
+            rabbit.add(head);
+            const earR = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 8), new THREE.MeshStandardMaterial({ color: 0xffaa88 }));
+            earR.position.set(-0.3, 1.8, 0.4);
+            earR.rotation.z = -0.2;
+            rabbit.add(earR);
+            const earL = earR.clone(); earL.position.set(0.3, 1.8, 0.4); earL.rotation.z = 0.2;
+            rabbit.add(earL);
+            const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+            eyeL.position.set(-0.2, 1.4, 0.85);
+            rabbit.add(eyeL);
+            const eyeR = eyeL.clone(); eyeR.position.x = 0.2;
+            rabbit.add(eyeR);
+            rabbit.position.set(-35, 0, -35);
+            scene.add(rabbit);
+        }
+
+        function setupEasterEffects() {
+            const colors = [0xff69b4, 0xff4500, 0xffd700, 0x7cfc00, 0x00ffff, 0xff00ff, 0x00ff00, 0xffa500];
+            for (let i = 0; i < 80; i++) {
+                const egg = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16), new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], emissive: 0x442200 }));
+                egg.scale.set(0.8, 1.2, 0.8);
+                egg.position.set((Math.random() - 0.5) * 88, 0.2, (Math.random() - 0.5) * 88);
+                scene.add(egg);
+                easterEggs.push(egg);
+            }
+        }
+
+        function setupChristmasEffects() {
+            const particleCount = 6000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 105;
+                positions[i+1] = Math.random() * 30;
+                positions[i+2] = (Math.random() - 0.5) * 105;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            snowParticles = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true }));
+            scene.add(snowParticles);
+        }
+        
+        function createChristmasDecorations() {
+            for (let i = 0; i < 40; i++) {
+                const x = (Math.random() - 0.5) * 85;
+                const z = (Math.random() - 0.5) * 85;
+                if (Math.abs(x) < 40 && Math.abs(z) < 40) createChristmasGift(x, z);
+            }
+            for (let i = 0; i < 12; i++) {
+                const x = (Math.random() - 0.5) * 80;
+                const z = (Math.random() - 0.5) * 80;
+                if (Math.abs(x) < 40 && Math.abs(z) < 40) createSnowman(x, z);
+            }
+            for (let i = 0; i < 6; i++) {
+                const x = (Math.random() - 0.5) * 75;
+                const z = (Math.random() - 0.5) * 75;
+                if (Math.abs(x) < 38 && Math.abs(z) < 38) createSanta(x, z);
+            }
+        }
+
+        function setupNightmareEffects() {
+            const particleCount = 4000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 100;
+                positions[i+1] = Math.random() * 25;
+                positions[i+2] = (Math.random() - 0.5) * 100;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            bloodParticles = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x880000, size: 0.2, transparent: true }));
+            scene.add(bloodParticles);
+            scene.fog.color.set(0x330000);
+        }
+
+        function setupHalloweenEffects() {
+            for (let i = 0; i < 80; i++) {
+                const pumpkin = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16), new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0x331100 }));
+                pumpkin.scale.set(1.2, 0.9, 1.2);
+                pumpkin.position.set((Math.random() - 0.5) * 88, 0.5, (Math.random() - 0.5) * 88);
+                scene.add(pumpkin);
+            }
+        }
+
+        function setupRamadanEffects() {
+            for (let i = 0; i < 80; i++) {
+                const lantern = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.7, 8), new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0x442200, metalness: 0.6 }));
+                lantern.position.set((Math.random() - 0.5) * 88, 2.5, (Math.random() - 0.5) * 88);
+                scene.add(lantern);
+            }
+        }
+
+        function setupEidFitrEffects() {
+            const colors = [0xff69b4, 0xff4500, 0xffd700, 0x7cfc00, 0x00ffff];
+            for (let i = 0; i < 150; i++) {
+                const candy = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8), new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)] }));
+                candy.position.set((Math.random() - 0.5) * 92, 0.2, (Math.random() - 0.5) * 92);
+                scene.add(candy);
+            }
+        }
+
+        function setupEidAdhaEffects() {
+            for (let i = 0; i < 30; i++) {
+                const sheep = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 8), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+                body.position.y = 0.5;
+                sheep.add(body);
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+                head.position.set(0.6, 0.6, 0);
+                sheep.add(head);
+                const blood = new THREE.Mesh(new THREE.CircleGeometry(0.8, 8), new THREE.MeshBasicMaterial({ color: 0x880000, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+                blood.rotation.x = -Math.PI/2;
+                blood.position.y = -0.3;
+                sheep.add(blood);
+                sheep.position.set((Math.random() - 0.5) * 88, 0, (Math.random() - 0.5) * 88);
+                scene.add(sheep);
+            }
+        }
+
+        function setupControls() {
+            window.onkeydown = (e) => {
+                if (adShowing) return;
+                keys[e.key.toLowerCase()] = true;
+                if (e.code === 'Space' && isGrounded && gameRunning && !isGameOver) { velocity = jumpPower; isGrounded = false; }
+                if (e.key.toLowerCase() === 'f' && gameRunning && !isGameOver) { flashlightOn = !flashlightOn; if (flashlight) flashlight.intensity = flashlightOn ? 3.0 : 0; }
+                if (e.key.toLowerCase() === 'r' && gameRunning && !isGameOver) { battery = Math.min(100, battery + 30); updateBatteryDisplay(); }
+                if (e.key.toLowerCase() === 'control') { isCrouching = true; }
+            };
+            window.onkeyup = (e) => { keys[e.key.toLowerCase()] = false; if (e.key.toLowerCase() === 'control') { isCrouching = false; } };
+            window.onmousemove = (e) => { if (document.pointerLockElement && !adShowing) { yaw -= e.movementX * 0.003; pitch -= e.movementY * 0.003; pitch = Math.max(-1.3, Math.min(1.3, pitch)); if (camera) camera.rotation.set(pitch, yaw, 0, 'YXZ'); } };
+            if (renderer) { renderer.domElement.onclick = () => { if (!isGameOver && gameRunning && !adShowing) renderer.domElement.requestPointerLock(); }; }
+        }
+
+        function checkCollisionWithWalls() {
+            const limit = 47;
+            if (camera.position.x > limit) camera.position.x = limit;
+            if (camera.position.x < -limit) camera.position.x = -limit;
+            if (camera.position.z > limit) camera.position.z = limit;
+            if (camera.position.z < -limit) camera.position.z = -limit;
+        }
+
+        function animate() {
+            if (!gameRunning || isGameOver || gameWin || adShowing) { requestAnimationFrame(animate); return; }
+            requestAnimationFrame(animate);
+
+            velocity += gravity;
+            camera.position.y += velocity;
+            const targetHeight = isCrouching ? crouchHeight : playerHeight;
+            currentPlayerHeight += (targetHeight - currentPlayerHeight) * 0.2;
+            if (camera.position.y <= currentPlayerHeight) { camera.position.y = currentPlayerHeight; velocity = 0; isGrounded = true; }
+
+            const isMoving = keys['w'] || keys['s'] || keys['a'] || keys['d'];
+            if (keys['shift'] && isMoving && !isCrouching) currentSpeed = HUMAN_JOG_SPEED;
+            else if (isCrouching) currentSpeed = CROUCH_SPEED;
+            else currentSpeed = HUMAN_WALK_SPEED;
+
+            if (keys['w']) { camera.position.x -= Math.sin(yaw) * currentSpeed; camera.position.z -= Math.cos(yaw) * currentSpeed; }
+            if (keys['s']) { camera.position.x += Math.sin(yaw) * currentSpeed; camera.position.z += Math.cos(yaw) * currentSpeed; }
+            if (keys['a']) { camera.position.x -= Math.cos(yaw) * currentSpeed; camera.position.z += Math.sin(yaw) * currentSpeed; }
+            if (keys['d']) { camera.position.x += Math.cos(yaw) * currentSpeed; camera.position.z -= Math.sin(yaw) * currentSpeed; }
+            camera.rotation.set(pitch, yaw, 0, 'YXZ');
+            checkCollisionWithWalls();
+
+            if (monster && monsterSpeed > 0) {
+                const dir = new THREE.Vector3().subVectors(camera.position, monster.position).normalize();
+                const dist = camera.position.distanceTo(monster.position);
+                monsterDistance = dist;
+                const speedMultiplier = Math.max(0.4, Math.min(1.2, 15 / Math.max(5, dist)));
+                monster.position.x += dir.x * monsterSpeed * speedMultiplier;
+                monster.position.z += dir.z * monsterSpeed * speedMultiplier;
+                monster.lookAt(camera.position);
+                document.getElementById('distance').innerText = Math.floor(dist);
+                if (dist < 2.2 && !adShowing) triggerJumpscare();
+            }
+
+            if (rabbit && document.getElementById('game-mode').value === 'easter') {
+                const dir = new THREE.Vector3().subVectors(camera.position, rabbit.position).normalize();
+                const dist = camera.position.distanceTo(rabbit.position);
+                rabbitDistance = dist;
+                rabbit.position.x += dir.x * rabbitSpeed * 0.9;
+                rabbit.position.z += dir.z * rabbitSpeed * 0.9;
+                rabbit.lookAt(camera.position);
+                document.getElementById('rabbit-distance').innerText = Math.floor(dist);
+                if (dist < 2.0 && !adShowing) triggerJumpscare();
+            }
+
+            if (flashlightOn && gameRunning) { battery -= batteryDrainRate; if (battery < 0) battery = 0; updateBatteryDisplay(); if (battery <= 0) { flashlightOn = false; if (flashlight) flashlight.intensity = 0; } }
+
+            tapGlows.forEach(tap => { if (tap.group.userData.active) { tap.pulseTime += 0.05; const pulse = 1.0 + Math.sin(tap.pulseTime) * 0.3; if (tap.light) tap.light.intensity = pulse; } });
+            checkTapInteractions();
+
+            const mode = document.getElementById('game-mode').value;
+            if (mode === 'ramadan' && window.ramadanStarData) {
+                window.ramadanStarData.time += 0.02;
+                const intensity = 0.8 + Math.sin(window.ramadanStarData.time) * 0.4;
+                if (window.ramadanStarData.light) window.ramadanStarData.light.intensity = intensity;
+                if (window.ramadanStarData.group) {
+                    const scale = 1 + Math.sin(window.ramadanStarData.time) * 0.05;
+                    window.ramadanStarData.group.scale.set(scale, scale, scale);
+                }
+            }
+
+            if (bloodParticles) { const pos = bloodParticles.geometry.attributes.position.array; for (let i = 1; i < pos.length; i += 3) { pos[i] -= 0.03; if (pos[i] < 0) pos[i] = 20; } bloodParticles.geometry.attributes.position.needsUpdate = true; }
+            if (snowParticles) { const pos = snowParticles.geometry.attributes.position.array; for (let i = 1; i < pos.length; i += 3) { pos[i+1] -= 0.02; if (pos[i+1] < 0) pos[i+1] = 25; } snowParticles.geometry.attributes.position.needsUpdate = true; }
+            renderer.render(scene, camera);
+        }
+
+        function checkTapInteractions() {
+            const msgDiv = document.getElementById('interact-msg');
+            let closestTap = null, closestDistance = INTERACT_DISTANCE + 1;
+            interactables.forEach(tap => { if (tap.userData.active) { const distance = camera.position.distanceTo(tap.position); if (distance < closestDistance) { closestDistance = distance; closestTap = tap; } } });
+            if (closestTap && closestDistance <= INTERACT_DISTANCE) { msgDiv.style.display = 'block'; msgDiv.innerText = translations[currentLang].interactMsg; if (keys['e']) { closeTap(closestTap); keys['e'] = false; } } else { msgDiv.style.display = 'none'; }
+        }
+
+        function closeTap(tap) {
+            if (!tap.userData.active) return;
+            tap.userData.active = false;
+            tap.children.forEach(child => { if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(mat => { mat.color.setHex(0x666666); if (mat.emissive) mat.emissive.setHex(0x222222); }); } else { child.material.color.setHex(0x666666); if (child.material.emissive) child.material.emissive.setHex(0x222222); } } });
+            const tapGlow = tapGlows.find(t => t.group === tap); if (tapGlow && tapGlow.light) tapGlow.light.intensity = 0;
+            sfxTapClose.play().catch(() => { });
+            tapsRepaired++; document.getElementById('count').innerText = tapsRepaired; document.getElementById('remaining-taps').innerText = 3 - tapsRepaired;
+            if (tapsRepaired >= 3) { sfxSuccess.play().catch(() => { }); triggerWin(); }
+        }
+
+        function triggerWin() {
+            gameWin = true; isGameOver = true; gameRunning = false;
+            stopMusic();
+            document.getElementById('hud').style.display = 'none'; document.getElementById('tap-counter').style.display = 'none';
+            document.getElementById('interact-msg').style.display = 'none'; document.getElementById('touch-controls').style.display = 'none';
+            document.getElementById('look-area').style.display = 'none';
+            sfxGhost.pause(); sfxHeartbeat.pause();
+            document.getElementById('win-screen').style.display = 'flex';
+            setTimeout(() => { document.getElementById('win-screen').style.display = 'none'; AdSystem.showAdAndReturnToMenu(); }, 2000);
+        }
+
+        function triggerJumpscare() {
+            isGameOver = true; gameWin = false; gameRunning = false;
+            stopMusic();
+            sfxScream.play().catch(() => { });
+            document.getElementById('hud').style.display = 'none'; document.getElementById('tap-counter').style.display = 'none';
+            document.getElementById('interact-msg').style.display = 'none'; document.getElementById('touch-controls').style.display = 'none';
+            document.getElementById('look-area').style.display = 'none';
+            sfxGhost.pause(); sfxHeartbeat.pause();
+            document.getElementById('jumpscare').style.display = 'flex';
+            setTimeout(() => { document.getElementById('jumpscare').style.display = 'none'; AdSystem.showAdAndReturnToMenu(); }, 2000);
+        }
+
+        const AdSystem = {
+            platform: 'unknown', adShowing: false, adChecked: false,
+            detectPlatform: function() { const hostname = window.location.hostname; if (hostname.includes('y8.com')) this.platform = 'y8'; else if (hostname.includes('crazygames.com')) this.platform = 'crazygames'; else if (hostname.includes('gamedistribution.com')) this.platform = 'gamedistribution'; else if (hostname.includes('poki.com')) this.platform = 'poki'; else this.platform = 'simulator'; console.log('✅ منصة الإعلانات:', this.platform); return this.platform; },
+            showAdAndReturnToMenu: function() {
+                if (this.adShowing) return;
+                this.adShowing = true; window.adShowing = true; this.adChecked = false;
+                document.getElementById('hud').style.display = 'none'; document.getElementById('tap-counter').style.display = 'none';
+                document.getElementById('interact-msg').style.display = 'none'; document.getElementById('touch-controls').style.display = 'none';
+                document.getElementById('look-area').style.display = 'none';
+                this.showSearchingUI();
+                const timeoutId = setTimeout(() => { if (!this.adChecked) { this.hideAdUI(); this.adShowing = false; window.adShowing = false; returnToMenu(); } }, 5000);
+                setTimeout(() => { if (!this.adChecked) { this.adChecked = true; clearTimeout(timeoutId); this.hideAdUI(); this.adShowing = false; window.adShowing = false; returnToMenu(); } }, 3000);
+            },
+            showSearchingUI: function() {
+                let adContainer = document.getElementById('ad-container');
+                if (!adContainer) { adContainer = document.createElement('div'); adContainer.id = 'ad-container'; document.body.appendChild(adContainer); }
+                adContainer.innerHTML = `<div style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px;"><div style="color:#ff3300; font-size:2.5rem; margin-bottom:30px; animation:adPulse 1.5s infinite;">🔍 جاري البحث عن إعلان...</div><div style="color:#00ffff; font-size:1.5rem; margin-bottom:20px;">سيتم العودة للقائمة بعد 5 ثواني</div><div style="width:300px; height:6px; background:#333; border-radius:3px; overflow:hidden;"><div id="search-progress" style="width:0%; height:100%; background:#ff3300; transition:width 5s linear;"></div></div></div>`;
+                setTimeout(() => { const progress = document.getElementById('search-progress'); if (progress) progress.style.width = '100%'; }, 100);
+                adContainer.style.display = 'flex';
+            },
+            hideAdUI: function() { const adContainer = document.getElementById('ad-container'); if (adContainer) adContainer.style.display = 'none'; }
+        };
+
+        window.AdSystem = AdSystem;
+        window.adShowing = false;
+        
+        window.addEventListener('load', function() {
+            AdSystem.detectPlatform();
+            console.log('🚀 لعبة كسالة الحمام جاهزة');
+            console.log('🏫 ساحة مدرسة كبيرة (100×100) ومغلقة بالجدران');
+            console.log('🚶 سرعة اللاعب: مشي = 0.14 (5 كم/ساعة - سرعة إنسان عادي)');
+            console.log('🏃 الهرولة: 0.24 (9 كم/ساعة - ركض خفيف)');
+            console.log('👻 كسالة الحمام ترتدي لباساً خاصاً بكل وضع');
+            console.log('🎵 الموسيقى تعمل فوراً وبشكل مستمر');
+            console.log('🎄 وضع كريسماس: ثلج متساقط + هدايا + رجال ثلج + بابا نويل');
+            console.log('🌙 وضع رمضان: فوانيس مضيئة + هلال ساطع + نجمة متوهجة');
+            
+            const music = document.getElementById('bg-music');
+            music.volume = 0.35;
+            music.loop = true;
+            music.play().catch(e => console.log("⚠️ انتظر تفاعل المستخدم لتشغيل الموسيقى:", e));
+            document.body.addEventListener('click', () => { if (music.paused) music.play().catch(()=>{}); }, { once: true });
+        });
+        
+        setInterval(() => { document.getElementById('total-earnings-display').innerText = totalEarnings; }, 1000);
+    </script>
+</body>
+</html>
